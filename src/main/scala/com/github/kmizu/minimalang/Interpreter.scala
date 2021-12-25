@@ -2,6 +2,7 @@ package com.github.kmizu.minimalang
 
 import com.github.kmizu.minimalang.Ast
 import com.github.kmizu.minimalang.Ast.Expression
+import com.github.kmizu.minimalang.Parser._
 
 import scala.collection.mutable.Map
 
@@ -15,6 +16,12 @@ object Interpreter {
         val value = interpretMain(expression)
         environment.put(name, value)
         value
+      case Ast.Literal(value) =>
+        value
+      case Ast.Println(message, value) =>
+        val result = interpretMain(value)
+        println(s"${message}:${result}")
+        result
       case Ast.If(cond, thenClause, elseClause) =>
         val condResult = interpretMain(cond)
         if(condResult != 0) {
@@ -23,9 +30,9 @@ object Interpreter {
           interpretMain(elseClause)
         }
       case Ast.Sequence(expressions) =>
-        val firstResult = interpretMain(expressions.head)
-        val rest = expressions.tail
-        rest.foldLeft(firstResult){(a, b) => interpretMain(b)}
+        val head = expressions.head
+        val tail = expressions.tail
+        tail.foldLeft(interpretMain(head)){(a, b) => interpretMain(b)}
       case Ast.While(cond, body) =>
         def go(): Int = if(interpretMain(cond) != 0) {
           interpretMain(body)
@@ -34,8 +41,6 @@ object Interpreter {
           0
         }
         go()
-      case Ast.Literal(n) =>
-        n
       case Ast.BinaryExpression(operator, lhs, rhs) =>
         val lhsResult = interpretMain(lhs)
         val rhsResult = interpretMain(rhs)
@@ -52,11 +57,11 @@ object Interpreter {
           case Eq => if(lhsResult == rhsResult) 1 else 0
           case NEq => if(lhsResult != rhsResult) 1 else 0
         }
-      case Ast.Println(message, value) =>
-        val result = interpretMain(value)
-        println(s"${message}:${result}")
-        result
     }
     interpretMain(program.body)
+  }
+  def interpretAll(programText: String): Int = {
+    val program = parseAll(programText)
+    interpret(program)
   }
 }
